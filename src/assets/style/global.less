@@ -1,0 +1,191 @@
+:global {
+
+  @ant-prefix: ant;
+  @pagination-prefix-cls: ~"@{ant-prefix}-pagination";
+  @input-prefix-cls: ~"@{ant-prefix}-input";
+  @pagination-border-color: rgba(217, 217, 217, 1);
+  .@{pagination-prefix-cls} {
+    &-item{
+      border-color:@pagination-border-color;
+      &:focus,
+      &:hover {
+        transition: all .3s;
+        border-color: @pagination-border-color;
+        a{
+          color: rgba(0, 0, 0, 0.65);
+        }
+      }
+      &-link{
+        border-color: @pagination-border-color;
+      }
+      &-active{
+        background: #D8000F;
+        a{
+          color: #fff;
+        }
+        &:focus,
+        &:hover{
+          a{
+            color: #fff;
+          }
+        }
+      }
+    }
+    &-prev,
+    &-next {
+      outline: 0;
+      a {
+        color: rgba(0, 0, 0, 0.65);;
+        border-color: @pagination-border-color;
+        user-select: none;
+      }
+
+      &:hover a {
+        border-color:#fff;
+      }
+      .@{pagination-prefix-cls}-item-link {
+        border-color: @pagination-border-color;
+      }
+
+      &:focus .@{pagination-prefix-cls}-item-link,
+      &:hover .@{pagination-prefix-cls}-item-link {
+        border-color: @pagination-border-color;
+        color: rgba(0, 0, 0, 0.65);
+      }
+    }
+    &-options {
+      &-size-changer {
+        .ant-select-selection{
+          border-color: @pagination-border-color;
+          box-shadow: none;
+        }
+      }
+      &-quick-jumper {
+        input {
+          border-color: @pagination-border-color;
+          &:hover,
+          &:focus{
+            border-color: @pagination-border-color;
+            box-shadow: none;
+          }
+        }
+      }
+    }
+  }
+  .@{input-prefix-cls} {
+    &:focus,
+    &:active{
+      border-color: rgba(217, 217, 217, 1);
+    }
+  }
+  .ant-btn {
+    &:focus,
+    &:hover{
+      color: #fff!important;
+    }
+  }
+  .ant-modal-body {
+    max-height: 480px;
+    overflow: auto;
+    // overflow-x: hidden;
+    // overflow-y: scroll;
+  }
+
+  .contentWrapper {
+    background: #fff;
+    padding: 24px;
+    margin: 0px;
+  }
+
+  .ant-table-tbody>tr.ant-table-row-hover>td,
+  .ant-table-tbody>tr:hover>td {
+    background: #fff0f0;
+  }
+
+  .ant-select-dropdown {
+    box-shadow: 0 4px 8px #d9d9d9;
+  }
+
+  .ant-select-selection:focus {
+    border-color: #d8000f;
+  }
+
+  .ant-input:focus {
+    border-color: #d8000f;
+    outline: 0;
+    box-shadow: 0 0 0 2px rgba(216, 0, 15, 0.2);
+    border-right-width: 1px !important;
+  }
+
+  .ant-calendar-panel {
+    box-shadow: 0 4px 8px #d9d9d9;
+  }
+
+  .ant-btn {
+    background-color: #666!important;
+    border-color: #666!important;
+  }
+
+  .ant-btn:hover {
+    background-color: #867f7f!important;
+    border-color: #867f7f!important;
+  }
+
+  .ant-btn-primary {
+    background-color: #D8000F!important;
+    border-color: #D8000F!important;
+  }
+
+  .ant-btn-primary:hover {
+    background-color: #dd2532!important;
+    border-color: #dd2532!important;
+    opacity: .8;
+  }
+
+  .ant-btn-primary[disabled], .ant-btn-primary[disabled]:hover {
+    color: rgba(0,0,0,.25)!important;
+    background-color: #f5f5f5!important;
+    border-color: #d9d9d9!important;
+  }
+
+  .ant-btn-danger {
+    background-color: #FBB92B;
+    border-color: #FBB92B;
+  }
+
+  .ant-btn-danger:hover {
+    background-color: rgb(252, 194, 68);
+    border-color: rgb(252, 194, 68);
+  }
+  
+  .ant-select-selection:hover, .ant-input:hover {
+    border-color: #d8000f;
+  }
+
+  a.yellow {
+    color: #FBB92B;
+  }
+
+  a.yellow[disabled] {
+    color: rgba(0, 0, 0, 0.25);
+  }
+
+  body, p, a, span, div, label, html, div, span, iframe,h1, h2, 
+  h3, h4, h5, h6, p, blockquote, pre,abbr, address, cite, code,del, dfn, 
+  em, img, ins,kbd, q, samp,small, strong, sub, sup, var,b, i,dl, dt, dd, 
+  ol, ul, li,fieldset, form, legend, caption, tbody, input,
+  tfoot,thead,tr, th, td,article, aside, canvas, details, figcaption, 
+  figure, footer, header, hgroup, menu, nav, section, summary,time, mark, 
+  audio, video, textarea, select, button {
+    font-family: "Microsoft YaHei", "Chinese Quote", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"!important;
+  }
+
+  .ant-table, .ant-input, .ant-form-item, .ant-tabs, .ant-timeline, .ant-menu, .ant-breadcrumb, .ant-tree, .ant-form {
+    font-family: "Microsoft YaHei", "Chinese Quote", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"!important
+  }
+
+  input[type="text"], input[type="password"], input[type="number"], textarea, input.ant-input {
+    font-family: "Microsoft YaHei", "Chinese Quote", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"!important
+  }
+
+}
