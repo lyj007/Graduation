@@ -1,129 +1,269 @@
+import React, { Component } from 'react'
+import PropTypes from 'prop-types'
 
-import React from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { Upload, Icon, Button, Progress,Checkbox, Modal, Spin, Radio, message } from 'antd'
 
-const CustomButton = () => <span className="octicon octicon-star" />;
-function insertStar() {
-  const cursorPosition = this.quill.getSelection().index;
-  this.quill.insertText(cursorPosition, "★");
-  this.quill.setSelection(cursorPosition + 1);
-}
+import request from 'superagent'
+import SparkMD5 from 'spark-md5'
 
-const CustomToolbar = () => (
-  <div id="toolbar">
-    <select className="ql-header" defaultValue={""} onChange={e => e.persist()}>
-      <option value="1" />
-      <option value="2" />
-      <option selected />
-    </select>
-    <button className="ql-bold" />
-    <button className="ql-italic" />
-    <select className="ql-color">
-      <option value="red" />
-      <option value="green" />
-      <option value="blue" />
-      <option value="orange" />
-      <option value="violet" />
-      <option value="#d0d1d2" />
-      <option selected />
-    </select>
-    <button className="ql-insertStar">
-      <CustomButton />
-    </button>
-  </div>
-);
+const confirm = Modal.confirm
+const Dragger = Upload.Dragger
 
-/* 
- * Editor component with custom toolbar and content containers
- */
-class Editor extends React.Component {
+class FileUpload extends Component {
   constructor(props) {
-    super(props);
-    this.state = { editorHtml: "发热减肥不能惹饭局染发让南方人 v让女人减肥染发让你放假" };
-    this.handleChange = this.handleChange.bind(this);
+    super(props)
+    this.state = {
+      preUploading:false,   //预处理
+      chunksSize:0,   // 上传文件分块的总个数
+      currentChunks:0,  // 当前上传的队列个数 当前还剩下多少个分片没上传
+      uploadPercent:-1,  // 上传率
+      preUploadPercent:-1, // 预处理率  
+      uploadRequest:false, // 上传请求，即进行第一个过程中
+      uploaded:false, // 表示文件是否上传成功
+      uploading:false, // 上传中状态
+    }
+  }
+  showConfirm = () => {
+    const _this = this
+    confirm({
+      title: '是否提交上传?',
+      content: '点击确认进行提交',
+      onOk() {
+        _this.preUpload()
+      },
+      onCancel() { },
+    })
+  }
+  
+  preUpload = (res)=>{
+   // requestUrl,返回可以上传的分片队列
+   //...
+   let uploadList = res.body.Chunks.filter((value)=>{
+    return value.status === 'Pending'
+  })
+
+  // 从返回结果中获取当前还有多少个分片没传
+  let currentChunks = res.body.Total - res.body.Uploaded
+
+  // 获得上传进度
+  let uploadPercent = Number(((this.state.chunksSize - currentChunks) /this.state.chunksSize * 100).toFixed(2))      
+  // 上传之前，先判断文件是否已经上传成功
+  if(uploadPercent === 100){
+    message.success('上传成功')
+    this.setState({
+      uploaded:true,    // 让进度条消失
+      uploading:false
+    })
+  }else{
+    this.setState({
+      uploaded:false,
+      uploading:true    
+    })
   }
 
-  handleChange(html) {
-    this.setState({ editorHtml: html });
+  this.setState({
+    uploadRequest:false,    // 上传请求成功
+    currentChunks,
+    uploadPercent
+  })
+  //进行分片上传
+  this.handlePartUpload(uploadList)
+
+  };
+
+ 
+  handlePartUpload = (uploadList)=>{
+    let blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice  
+    // 遍历uploadList
+    uploadList.forEach((value)=>{
+      // 取出每个分片里的基本属性
+      let {fileMd5,chunkMd5,chunk,start,end} = value
+      let formData = new FormData(),
+          //新建一个Blob对象，将对应分片的arrayBuffer加入Blob中
+          blob = new Blob([this.state.arrayBufferData[chunk-1].currentBuffer],{type: 'application/octet-stream'}),
+          // 上传的参数
+          params = `fileMd5=${fileMd5}&chunkMd5=${chunkMd5}&chunk=${chunk}&start=${start}&end=${end}&chunks=${this.state.arrayBufferData.length}`
+      
+      // 将生成blob塞入到formdata中传入服务端
+      formData.append('chunk', blob, chunkMd5)
+      
+      request
+        .post(`http://X.X.X.X/api/upload_file_part?${params}`)
+        .send(formData)
+        .end((err,res)=>{
+          if(res.body.Code === 200){
+            let currentChunks = this.state.currentChunks
+            --currentChunks
+            // 计算上传进度
+            let uploadPercent = Number(((this.state.chunksSize - currentChunks) /this.state.chunksSize * 100).toFixed(2))
+            this.setState({
+              currentChunks,  // 同步当前所需上传的chunks
+              uploadPercent,
+              uploading:true
+            })
+            if(currentChunks ===0){
+              // 调用验证api
+              this.checkUpload()
+              message.success('上传成功')
+              this.setState({
+                uploading:false,    // 让进度条消失
+                uploaded:true
+              })
+            }
+          }
+        })
+        
+    })
   }
 
+  
   render() {
-    return (
-      <div className="text-editor">
-        <CustomToolbar />
-        <ReactQuill
-          onChange={this.handleChange}
-          placeholder={this.props.placeholder}
-          modules={Editor.modules}
-          formats={Editor.formats}
-          style={{ width: '60%' }}
-          theme={"snow"}
-          defaultValue={`
-          ${<p>一、任务专业(或名称)</p>}
+    const {preUploading,uploadPercent,preUploadPercent,uploadRequest,uploaded,uploading} = this.state
+    const _this = this
+    const uploadProp = {
+      onRemove: (file) => {
+        this.setState(({ fileList }) => {
+          const index = fileList.indexOf(file)
+          const newFileList = fileList.slice()
+          newFileList.splice(index, 1)
+          return {
+            fileList: newFileList,
+          }
+        })
+      },
+      beforeUpload: (file, fileList) => {
+        console.log('file===', file)
+        // 首先清除一下各种上传的状态
+        this.setState({
+          uploaded:false,   // 上传成功
+          uploading:false,  // 上传中
+          uploadRequest:false   // 上传预处理
+        })
+        // 兼容性的处理
+        let blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
+        const chunkSize = 1024*1024*5;                            // 切片每次5M
+        const chunks = Math.ceil(file.size / chunkSize);
+        let currentChunk = 0; // 当前上传的chunk
+        const spark = new SparkMD5.ArrayBuffer();
+          // 对arrayBuffer数据进行md5加密，产生一个md5字符串
+        const chunkFileReader = new FileReader();  // 用于计算出每个chunkMd5
+        const totalFileReader = new FileReader(); // 用于计算出总文件的fileMd5
           
-          土建/精装修/道路.....算量或组价
-        二、任务范围
-          计量：**号楼（地上、地下）主体建筑算量，轴号**至**区域（楼层**至**）精装修算量，道路**专业或道路桩号**至**算量；含上机或按**任务要求汇总；由任务包**负责统一建轴线及设置；由任务包**负责图纸资料问题的收集汇总；
-          组价：**专业组价含编制说明，包含（不包含）**部分；由任务包**负责问题的收集汇总；
-          （要求工作范围清晰，不漏项目，各人员之间不重复）
-        三、时间要求
-            **日前提交**阶段成果文件（如有阶段性提交成果文件需求）；**日前提交最终成果文件；（可要求过程中隔几日上传一次中间成果文件）
-        四、计量计价依据
-          1、**定额、**清单
-          2、**图纸
-          3、**方案
-          4、**清单编制会议纪要
-          5、**管理办法/制度流程
-          ...........
-        五、软件要求
-           算量：**软件/excle表格计算
-          计价：**软件/excle表格
-        六、成果文件要求：
-          **软件图形算量结果软件，分楼栋单独提交，以及导出的EXCell表格；
-          **软件计价，分专业（土建、钢结构等）分楼号分区域单独简历单位工程，以及导出为ECCELL表格（包含**表、**表、......）
-        七、其他要求和注意事项
-          1、 ** 日任务包**、任务包**需进行现场踏勘 ，按**要求形成踏勘记录表；`}
-        />
+        let params = {chunks: [], file: {}};   // 用于上传所有分片的md5信息
+        const arrayBufferData = [];             // 用于存储每个chunk的arrayBuffer对象,用于分片上传使用
+        params.file.fileName = file.name;
+        params.file.fileSize = file.size;
+
+        totalFileReader.readAsArrayBuffer(file);
+        totalFileReader.onload = function(e){
+            // 对整个totalFile生成md5
+            spark.append(e.target.result)
+            params.file.fileMd5 = spark.end() // 计算整个文件的fileMd5
+          };
+        // chunkFileReader.readAsArrayBuffer(spark); 
+        chunkFileReader.onload= function (e) {
+          // 对每一片分片进行md5加密
+          spark.append(e.target.result)
+          // 每一个分片需要包含的信息
+          let obj = {
+            chunk:currentChunk + 1,
+            start:currentChunk * chunkSize, // 计算分片的起始位置
+            end:((currentChunk * chunkSize + chunkSize) >= file.size) ? file.size : currentChunk * chunkSize + chunkSize, // 计算分片的结束位置
+            chunkMd5:spark.end(),
+            chunks
+          };
+          // 每一次分片onload,currentChunk都需要增加，以便来计算分片的次数
+          currentChunk++;          
+          params.chunks.push(obj)
+          // 将每一块分片的arrayBuffer存储起来，用来partUpload
+          let tmp = {
+            chunk:obj.chunk,
+            currentBuffer:e.target.result
+          }
+          arrayBufferData.push(tmp)
+          
+          if (currentChunk < chunks) {
+            // 当前切片总数没有达到总数时
+            loadNext()
+            
+            // 计算预处理进度
+            _this.setState({
+              preUploading:true,
+              preUploadPercent:Number((currentChunk / chunks * 100).toFixed(2))
+            })
+          } else {
+            //记录所有chunks的长度
+            params.file.fileChunks = params.chunks.length  
+            // 表示预处理结束，将上传的参数，arrayBuffer的数据存储起来
+            _this.setState({
+              preUploading:false,
+              uploadParams:params,
+              arrayBufferData,
+              chunksSize:chunks,
+              preUploadPercent:100              
+            })
+          }
+        }
+        console.log('=====', params);
+        FileReader.onerror = function () {
+          console.warn('oops, something went wrong.');
+        };
+        // const fr = new FileReader();
+        function loadNext() {
+          var start = currentChunk * chunkSize,
+            end = ((start + chunkSize) >= file.size) ? file.size : start + chunkSize;
+            chunkFileReader.readAsArrayBuffer(file.slice(start, end));
+        }
+
+        loadNext()
+
+        // 只允许一份文件上传
+        this.setState({
+          fileList: [file],
+          file: file
+        })
+        return false
+      },
+      fileList: this.state.fileList,
+    }
+    
+
+    return (
+      <div className="content-inner">
+        <Spin tip={
+              <div >
+                <h3 style={{margin:'10px auto',color:'#1890ff'}}>文件预处理中...</h3>
+                <Progress width={80} percent={preUploadPercent} type="circle" status="active" />
+              </div>
+              } 
+              spinning={preUploading} 
+              style={{ height: 350 }}>
+          <div style={{ marginTop: 16, height: 250 }}>
+            <Dragger {...uploadProp}>
+              <p className="ant-upload-drag-icon">
+                <Icon type="inbox" />
+              </p>
+              <p className="ant-upload-text">点击或者拖拽文件进行上传</p>
+              <p className="ant-upload-hint">Support for a single or bulk upload. Strictly prohibit from uploading company data or other band files</p>
+            </Dragger>
+            {uploadPercent>=0&&!!uploading&&<div style={{marginTop:20,width:'95%'}}>
+              <Progress percent={uploadPercent} status="active" />
+              <h4>文件上传中，请勿关闭窗口</h4>
+            </div>}
+            {!!uploadRequest&&<h4 style={{color:'#1890ff'}}>上传请求中...</h4>}
+            {!!uploaded&&<h4 style={{color:'#52c41a'}}>文件上传成功</h4>}
+            <Button type="primary" onClick={this.showConfirm} disabled={!!(this.state.preUploadPercent <100)}>
+                <Icon type="upload" />提交上传
+             </Button>
+          </div>
+        </Spin>
       </div>
-    );
+    )
   }
 }
 
-/* 
- * Quill modules to attach to editor
- * See https://quilljs.com/docs/modules/ for complete options
- */
-Editor.modules = {
-  toolbar: {
-    container: "#toolbar",
-    handlers: {
-      insertStar: insertStar
-    }
-  },
-  clipboard: {
-    matchVisual: false,
-  }
-};
+FileUpload.propTypes = {
+  //...
+}
 
-Editor.formats = [
-  "header",
-  "font",
-  "size",
-  "bold",
-  "italic",
-  "underline",
-  "strike",
-  "blockquote",
-  "list",
-  "bullet",
-  "indent",
-  "link",
-  "image",
-  "color"
-];
-export default Editor;
-// ReactDOM.render(
-//   <Editor placeholder={"Write something or insert a star ★"} />,
-//   document.querySelector(".app")
-// );
+export default FileUpload

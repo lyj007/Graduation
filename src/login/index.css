@@ -1,7 +1,34 @@
 
 
-path{
-  fill: none;
-  stroke: aquamarine;
-  stroke-width: 2;
+ul,li{ margin:0; padding:0; }
+li{ list-style:none; height: 28px; }
+.container{ display:inline-block; background:#efefef; padding:10px; border:1px solid #ccc; font-family:"Microsoft YaHei"; }
+.container .li_box{ height:28px; overflow:hidden; }
+.container ul{ position:relative; animation: moveUp 24s 0s infinite; -webkit-animation: moveUp 24s 0s infinite; }
+@keyframes moveUp
+{
+0% {top:0px;}
+18% {top:0px;}
+20% {top:-28px;}
+38% {top:-28px;}
+40% {top:-56px;}
+58% {top:-56px;}
+60% {top:-84px;}
+78% {top:-84px;}
+80% {top:-112px;}
+98% {top:-112px;}
 }
+@-webkit-keyframes moveUp /*Safari and Chrome*/
+{
+0% {top:0px;}
+18% {top:0px;}
+20% {top:-28px;}
+38% {top:-28px;}
+40% {top:-56px;}
+58% {top:-56px;}
+60% {top:-84px;}
+78% {top:-84px;}
+80% {top:-112px;}
+98% {top:-112px;}
+}
+.container li{ line-height:1.8; color:#666; }
